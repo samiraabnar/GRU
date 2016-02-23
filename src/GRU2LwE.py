@@ -383,12 +383,18 @@ class GRU2LwE(object):
 
     def save_model_parameters_theano(model, outfile):
         np.savez(outfile,
-            E=model.E.get_value(),
-            U=model.U.get_value(),
-            W=model.W.get_value(),
+            Embedding=model.E.get_value(),
+            U_update=model.U_update.get_value(),
+            U_rest=model.U_reset.set_value(),
+            U_candidate=model.U_candidate.get_value(),
+            W_update=model.W_update.get_value(),
+            W_rest=model.W_reset.set_value(),
+            W_candidate=model.W_candidate.get_value(),
+            b_update=model.b_update.get_value(),
+            b_rest=model.b_reset.set_value(),
+            b_candidate=model.b_candidate.get_value(),
             V=model.V.get_value(),
-            b=model.b.get_value(),
-            c=model.c.get_value())
+            output_bias=model.output_bias.get_value())
         print("Saved model parameters to %s." % outfile)
 
 
@@ -402,43 +408,41 @@ class GRU2LwE(object):
 
     @staticmethod
     def load_model(path):
-        npzfile = np.load(path)
-        E, U, W, V, b, c = npzfile["E"], npzfile["U"], npzfile["W"], npzfile["V"], npzfile["b"], npzfile["c"]
+        modelFile = np.load(path)
+        E, U_update,U_reset,U_candidate, W_update,W_reset,W_candidate,b_update,b_reset,b_candidate, V, ob = \
+                           modelFile["Embedding"], modelFile["U_update"], modelFile["W_update"], modelFile["b_update"],\
+                                                   modelFile["U_reset"], modelFile["W_reset"], modelFile["b_reset"],\
+                                                   modelFile["U_candidate"], modelFile["W_candidate"], modelFile["b_candidate"],\
+                           modelFile["V"],  modelFile["output_bias"]
         hidden_dim, word_dim = E.shape[0], E.shape[1]
         print("Building model model from %s with hidden_dim=%d word_dim=%d" % (path, hidden_dim, word_dim))
         sys.stdout.flush()
-        model = GRU2LwE(word_dim, hidden_dim=hidden_dim)
-        model.E.set_value(E)
-        model.U.set_value(U)
-        model.W.set_value(W)
+        model = GRU2LwE(input_dim=E.shape[1],embedding_dim=E.shape[0], hidden_dim1=U_update[0].shape[0],hidden_dim2=U_update[1].shape[0],output_dim=V.shape[0])
+        model.Embedding.set_value(E)
+        model.U_update.set_value(U_update)
+        model.U_reset.set_value(U_reset)
+        model.U_candidate.set_value(U_candidate)
+        model.W_update.set_value(W_update)
+        model.W_reset.set_value(W_reset)
+        model.W_candidate.set_value(W_candidate)
+        model.b_update.set_value(b_update)
+        model.b_reset.set_value(b_reset)
+        model.b_candidate.set_value(b_candidate)
+
         model.V.set_value(V)
-        model.b.set_value(b)
-        model.c.set_value(c)
+        model.output_bias.set_value(ob)
         return model
 
 if __name__ == '__main__':
 
-    LEARNING_RATE = float(os.environ.get("LEARNING_RATE", "0.001"))
-    VOCABULARY_SIZE = int(os.environ.get("VOCABULARY_SIZE", "2000"))
-    NEPOCH = int(os.environ.get("NEPOCH", "20"))
-    MODEL_OUTPUT_FILE = os.environ.get("MODEL_OUTPUT_FILE")
-    INPUT_DATA_FILE = os.environ.get("INPUT_DATA_FILE", "../data/reddit-comments-2015-08.csv")
-    PRINT_EVERY = int(os.environ.get("PRINT_EVERY", "10"))
-
-
-    if not MODEL_OUTPUT_FILE:
-      ts = datetime.now().strftime("%Y-%m-%d-%H-%M")
-      MODEL_OUTPUT_FILE = "GRU-%s-%s-%s-%s.dat" % (ts, VOCABULARY_SIZE, 48, 128)
-
-    # Load data
-    x_train, y_train, word_to_index, index_to_word = DataPrep.load_data_reditcomment(INPUT_DATA_FILE, VOCABULARY_SIZE)
-
-    # Build model
-    model = GRU2LwE(input_dim=VOCABULARY_SIZE,embedding_dim=48, output_dim=VOCABULARY_SIZE)
-
+    model = GRU2LwE(input_dim=2,embedding_dim=10, output_dim=2)
+    learning_rate = 0.001
+    x_train = [[1,2],[1,1]]
+    y_train = [[2,4],[2,2]]
     # Print SGD step time
     t1 = time.time()
-    model.sgd_step(x_train[10], y_train[10], LEARNING_RATE)
+    model.sgd_step(x_train, y_train, learning_rate)
+
     t2 = time.time()
     print("SGD Step time: %f milliseconds" % ((t2 - t1) * 1000.))
     sys.stdout.flush()
