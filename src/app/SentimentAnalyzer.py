@@ -1,6 +1,7 @@
 import numpy as np
 import datetime
 import sys
+import pickle
 sys.path.append('../../../')
 
 from Util.util.data.DataPrep import *
@@ -26,7 +27,7 @@ class SentimentAnalyzer(object):
         self.vocab_size = len(self.index_to_word)
 
     def init_model(self):
-        self.model = GRU2LwEmSentenceBased(input_dim=self.vocab_size, embedding_dim=300, output_dim=self.labels_count, hidden_dim1= 128, hidden_dim2=128)
+        self.model = GRU2LwEmSentenceBased(input_dim=self.vocab_size, embedding_dim=300, output_dim=self.labels_count, hidden_dim1= 256, hidden_dim2=256)
 
 
     def test_model(self,num_examples_seen):
@@ -47,7 +48,7 @@ class SentimentAnalyzer(object):
     def train_model(self):
 
             learning_rate = 0.001
-            nepoch = 20
+            nepoch = 3
             decay = 0.9
             epochs_per_callback = 1
 
@@ -62,6 +63,13 @@ class SentimentAnalyzer(object):
 
     def save(self):
         self.model.save_model_parameters_theano("FirstTrainedModel.txt")
+        with open('Dictionary/'+ dict + '.pkl', 'wb') as f:
+            pickle.dump(self.word_to_index, f,)
+
+    def load(self):
+        with open('test' + '.pkl', 'rb') as f:
+            self.word_to_index = pickle.load(f)
+
 def prepare_data():
     FileUtil.get_sentence_and_label_from_tree_annotation("../../data/sentiment/trees/train.txt")
     FileUtil.get_sentence_and_label_from_tree_annotation("../../data/sentiment/trees/dev.txt")
@@ -72,3 +80,4 @@ if __name__ == '__main__':
     print("training ... ")
     SA.train_model()
     SA.save()
+

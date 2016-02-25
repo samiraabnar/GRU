@@ -185,6 +185,12 @@ class GRU2LwEmSentenceBased(object):
             # Theano's softmax returns a matrix with one row, we only need the row
             o_t = T.nnet.softmax(V.dot(s_2) + output_bias)[0]
 
+            print_update_gate_1 = theano.printing.Print('UpdateGate_1 for ')
+            print_update_gate_1(update_gate_1)
+
+            print_update_gate_2 = theano.printing.Print('UpdateGate_2 for ')
+            print_update_gate_2(update_gate_2)
+
             return [o_t, s_1, s_2]
 
         [o, s, s2], updates = theano.scan(
@@ -379,7 +385,7 @@ class GRU2LwEmSentenceBased(object):
 
     def save_model_parameters_theano(model, outfile):
         np.savez(outfile,
-            Embedding=model.E.get_value(),
+            Embedding=model.Embedding.get_value(),
             U_update=model.U_update.get_value(),
             U_rest=model.U_reset.set_value(),
             U_candidate=model.U_candidate.get_value(),
@@ -413,7 +419,7 @@ class GRU2LwEmSentenceBased(object):
         hidden_dim, word_dim = E.shape[0], E.shape[1]
         print("Building model model from %s with hidden_dim=%d word_dim=%d" % (path, hidden_dim, word_dim))
         sys.stdout.flush()
-        model = GRU2LwE(input_dim=E.shape[1],embedding_dim=E.shape[0], hidden_dim1=U_update[0].shape[0],hidden_dim2=U_update[1].shape[0],output_dim=V.shape[0])
+        model = GRU2LwEmSentenceBased(input_dim=E.shape[1],embedding_dim=E.shape[0], hidden_dim1=U_update[0].shape[0],hidden_dim2=U_update[1].shape[0],output_dim=V.shape[0])
         model.Embedding.set_value(E)
         model.U_update.set_value(U_update)
         model.U_reset.set_value(U_reset)
@@ -431,7 +437,7 @@ class GRU2LwEmSentenceBased(object):
 
 if __name__ == '__main__':
 
-    model = GRU2LwE(input_dim=2,embedding_dim=10, output_dim=2)
+    model = GRU2LwEmSentenceBased(input_dim=2,embedding_dim=10, output_dim=2)
     learning_rate = 0.001
     x_train = [[1,2],[1,1]]
     y_train = [[2,4],[2,2]]
