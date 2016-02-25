@@ -48,7 +48,7 @@ class SentimentAnalyzer(object):
     def train_model(self):
 
             learning_rate = 0.001
-            nepoch = 3
+            nepoch = 2
             decay = 0.9
             epochs_per_callback = 1
 
@@ -62,9 +62,9 @@ class SentimentAnalyzer(object):
             self.model.train_with_sgd(self.train["sentences"],expected_outputs, learning_rate, nepoch, decay, epochs_per_callback,self.test_model)
 
     def save(self):
-        self.model.save_model_parameters_theano("FirstTrainedModel.txt")
-        with open('Dictionary/'+ dict + '.pkl', 'wb') as f:
-            pickle.dump(self.word_to_index, f,)
+        self.model.save_model_parameters_theano("FirstTrainedModel_0.txt")
+        with open('dict_0' + '.pkl', 'wb') as f:
+            pickle.dump(self.word_to_index, f)
 
     def load(self):
         with open('test' + '.pkl', 'rb') as f:

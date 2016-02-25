@@ -385,18 +385,18 @@ class GRU2LwEmSentenceBased(object):
 
     def save_model_parameters_theano(model, outfile):
         np.savez(outfile,
-            Embedding=model.Embedding.get_value(),
-            U_update=model.U_update.get_value(),
-            U_rest=model.U_reset.set_value(),
-            U_candidate=model.U_candidate.get_value(),
-            W_update=model.W_update.get_value(),
-            W_rest=model.W_reset.set_value(),
-            W_candidate=model.W_candidate.get_value(),
-            b_update=model.b_update.get_value(),
-            b_rest=model.b_reset.set_value(),
-            b_candidate=model.b_candidate.get_value(),
-            V=model.V.get_value(),
-            output_bias=model.output_bias.get_value())
+            Embedding=model.Embedding,
+            U_update=model.U_update,
+            U_rest=model.U_reset,
+            U_candidate=model.U_candidate,
+            W_update=model.W_update,
+            W_rest=model.W_reset,
+            W_candidate=model.W_candidate,
+            b_update=model.b_update,
+            b_rest=model.b_reset,
+            b_candidate=model.b_candidate,
+            V=model.V,
+            output_bias=model.output_bias)
         print("Saved model parameters to %s." % outfile)
 
 
