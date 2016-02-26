@@ -383,23 +383,6 @@ class GRU2LwEmSentenceBased(object):
                 callback(num_examples_seen, *args)
         return model
 
-    def save_model_parameters_theano(model, outfile):
-        np.savez(outfile,
-            Embedding=model.Embedding,
-            U_update=model.U_update,
-            U_rest=model.U_reset,
-            U_candidate=model.U_candidate,
-            W_update=model.W_update,
-            W_rest=model.W_reset,
-            W_candidate=model.W_candidate,
-            b_update=model.b_update,
-            b_rest=model.b_reset,
-            b_candidate=model.b_candidate,
-            V=model.V,
-            output_bias=model.output_bias)
-        print("Saved model parameters to %s." % outfile)
-
-
     def calculate_total_loss(self, X, Y):
         return np.sum([self.calculate_cost(x,y) for x,y in zip(X,Y)])
 
@@ -408,8 +391,27 @@ class GRU2LwEmSentenceBased(object):
         num_words = np.sum([len(y) for y in Y])
         return self.calculate_total_loss(X,Y)/float(num_words)
 
+    def save_model_parameters_theano(model, outfile):
+        np.savez(outfile,
+            Embedding=model.Embedding,
+            U_update=model.U_update,
+            U_reset=model.U_reset,
+            U_candidate=model.U_candidate,
+            W_update=model.W_update,
+            W_reset=model.W_reset,
+            W_candidate=model.W_candidate,
+            b_update=model.b_update,
+            b_reset=model.b_reset,
+            b_candidate=model.b_candidate,
+            V=model.V,
+            output_bias=model.output_bias)
+        print("Saved model parameters to %s." % outfile)
+
+
+
+
     @staticmethod
-    def load_model(path):
+    def load_model_parameters_theano(path):
         modelFile = np.load(path)
         E, U_update,U_reset,U_candidate, W_update,W_reset,W_candidate,b_update,b_reset,b_candidate, V, ob = \
                            modelFile["Embedding"], modelFile["U_update"], modelFile["W_update"], modelFile["b_update"],\

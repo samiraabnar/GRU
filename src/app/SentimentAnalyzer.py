@@ -11,9 +11,6 @@ from GRU.src.GRU2LwEmSentenceBased import *
 
 
 class SentimentAnalyzer(object):
-    def __init__(self):
-        self.init_train_data()
-        self.init_model()
 
 
 
@@ -29,7 +26,6 @@ class SentimentAnalyzer(object):
     def init_model(self):
         self.model = GRU2LwEmSentenceBased(input_dim=self.vocab_size, embedding_dim=300, output_dim=self.labels_count, hidden_dim1= 256, hidden_dim2=256)
 
-
     def test_model(self,num_examples_seen):
         pc_sentiment = np.zeros((len(self.test["sentences"]),self.labels_count))
         for i in np.arange(len(self.test["sentences"])):
@@ -44,31 +40,43 @@ class SentimentAnalyzer(object):
 
         print("Accuracy: %f" %accuracy)
 
-
     def train_model(self):
+        self.init_train_data()
+        self.model = GRU2LwEmSentenceBased(input_dim=self.vocab_size, embedding_dim=300, output_dim=self.labels_count, hidden_dim1= 256, hidden_dim2=256)
 
-            learning_rate = 0.001
-            nepoch = 2
-            decay = 0.9
-            epochs_per_callback = 1
+        learning_rate = 0.001
+        nepoch = 2
+        decay = 0.9
+        epochs_per_callback = 1
 
-            expected_outputs = []
-            for i in np.arange(len(self.train["sentences"])):
-                s_out = np.zeros((len(self.train["sentences"][i]),self.labels_count),dtype=np.float32)
-                s_out[-1] = self.train["sentiments"][i]
-                expected_outputs.append(s_out)
+        expected_outputs = []
+        for i in np.arange(len(self.train["sentences"])):
+            s_out = np.zeros((len(self.train["sentences"][i]),self.labels_count),dtype=np.float32)
+            s_out[-1] = self.train["sentiments"][i]
+            expected_outputs.append(s_out)
 
-
-            self.model.train_with_sgd(self.train["sentences"],expected_outputs, learning_rate, nepoch, decay, epochs_per_callback,self.test_model)
+        self.model.train_with_sgd(self.train["sentences"],expected_outputs, learning_rate, nepoch, decay, epochs_per_callback,self.test_model)
 
     def save(self):
-        self.model.save_model_parameters_theano("FirstTrainedModel_0.txt")
+        self.model.save_model_parameters_theano("FirstTrainedModel_1.txt")
         with open('dict_0' + '.pkl', 'wb') as f:
             pickle.dump(self.word_to_index, f)
 
     def load(self):
-        with open('test' + '.pkl', 'rb') as f:
+        with open('dict_0' + '.pkl', 'rb') as f:
             self.word_to_index = pickle.load(f)
+
+        self.index_to_word = [""] * len(self.word_to_index.keys())
+
+        for item in self.word_to_index.keys():
+            self.index_to_word[self.word_to_index[item]] = item
+
+        self.vocab_size = len(self.index_to_word)
+
+        self.model = GRU2LwEmSentenceBased.load_model_parameters_theano("FirstTrainedModel_1.txt.npz")
+
+
+
 
 def prepare_data():
     FileUtil.get_sentence_and_label_from_tree_annotation("../../data/sentiment/trees/train.txt")
@@ -77,6 +85,7 @@ def prepare_data():
 
 if __name__ == '__main__':
     SA = SentimentAnalyzer()
+    #SA.load()
     print("training ... ")
     SA.train_model()
     SA.save()
