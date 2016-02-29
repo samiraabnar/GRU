@@ -45,7 +45,6 @@ class GRU2LwEmSentenceBased(object):
         W_candidate = {}
         b_candidate = {}
 
-
         U_update[0] = np.random.uniform(-np.sqrt(1./self.embedding_dim), np.sqrt(1./self.embedding_dim), (self.hidden_dim1, self.embedding_dim))
         W_update[0] = np.random.uniform(-np.sqrt(1./self.hidden_dim1), np.sqrt(1./self.hidden_dim1), (self.hidden_dim1, self.hidden_dim1))
         b_update[0] = np.zeros((self.hidden_dim1))
@@ -393,18 +392,29 @@ class GRU2LwEmSentenceBased(object):
 
     def save_model_parameters_theano(model, outfile):
         np.savez(outfile,
-            Embedding=model.Embedding,
-            U_update=model.U_update,
-            U_reset=model.U_reset,
-            U_candidate=model.U_candidate,
-            W_update=model.W_update,
-            W_reset=model.W_reset,
-            W_candidate=model.W_candidate,
-            b_update=model.b_update,
-            b_reset=model.b_reset,
-            b_candidate=model.b_candidate,
-            V=model.V,
-            output_bias=model.output_bias)
+            Embedding=model.Embedding.get_value(),
+            U_update_0=model.U_update[0].get_value(),
+            U_update_1=model.U_update[1].get_value(),
+            U_reset_0=model.U_reset[0].get_value(),
+            U_reset_1=model.U_reset[1].get_value(),
+            U_candidate_0=model.U_candidate[0].get_value(),
+            U_candidate_1=model.U_candidate[1].get_value(),
+
+            W_update_0=model.W_update[0].get_value(),
+            W_update_1=model.W_update[1].get_value(),
+
+            W_reset_0=model.W_reset[0].get_value(),
+            W_reset_1=model.W_reset[1].get_value(),
+            W_candidate_0=model.W_candidate[0].get_value(),
+            W_candidate_1=model.W_candidate[1].get_value(),
+            b_update_0=model.b_update[0].get_value(),
+            b_update_1=model.b_update[1].get_value(),
+            b_reset_0=model.b_reset[0].get_value(),
+            b_reset_1=model.b_reset[1].get_value(),
+            b_candidate_0=model.b_candidate[0].get_value(),
+            b_candidate_1=model.b_candidate[1].get_value(),
+            V=model.V.get_value(),
+            output_bias=model.output_bias.get_value())
         print("Saved model parameters to %s." % outfile)
 
 
@@ -413,25 +423,36 @@ class GRU2LwEmSentenceBased(object):
     @staticmethod
     def load_model_parameters_theano(path):
         modelFile = np.load(path)
-        E, U_update,U_reset,U_candidate, W_update,W_reset,W_candidate,b_update,b_reset,b_candidate, V, ob = \
-                           modelFile["Embedding"], modelFile["U_update"], modelFile["W_update"], modelFile["b_update"],\
-                                                   modelFile["U_reset"], modelFile["W_reset"], modelFile["b_reset"],\
-                                                   modelFile["U_candidate"], modelFile["W_candidate"], modelFile["b_candidate"],\
+        E, U_update_0, U_update_1,U_reset_0, U_reset_1,U_candidate_0,U_candidate_1, W_update_0, W_update_1,W_reset_0,W_reset_1,W_candidate_0,W_candidate_1,b_update_0,b_update_1,b_reset_0,b_reset_1,b_candidate_0,b_candidate_1, V, ob = \
+                           modelFile["Embedding"], modelFile["U_update_0"], modelFile["U_update_1"],modelFile["U_reset_0"], modelFile["U_reset_1"],modelFile["U_candidate_0"], modelFile["U_candidate_1"],\
+                                                   modelFile["W_update_0"],modelFile["W_update_1"],modelFile["W_reset_0"], modelFile["W_reset_1"], modelFile["W_candidate_0"], modelFile["W_candidate_1"],\
+                                                   modelFile["b_update_0"],modelFile["b_update_1"],modelFile["b_reset_0"],modelFile["b_reset_1"],modelFile["b_candidate_0"],modelFile["b_candidate_1"],\
+                                                   \
+                                                   \
                            modelFile["V"],  modelFile["output_bias"]
         hidden_dim, word_dim = E.shape[0], E.shape[1]
         print("Building model model from %s with hidden_dim=%d word_dim=%d" % (path, hidden_dim, word_dim))
         sys.stdout.flush()
-        model = GRU2LwEmSentenceBased(input_dim=E.shape[1],embedding_dim=E.shape[0], hidden_dim1=U_update[0].shape[0],hidden_dim2=U_update[1].shape[0],output_dim=V.shape[0])
+        model = GRU2LwEmSentenceBased(input_dim=E.shape[1],embedding_dim=E.shape[0], hidden_dim1=U_update_0.shape[0],hidden_dim2=U_update_1.shape[0],output_dim=V.shape[0])
         model.Embedding.set_value(E)
-        model.U_update.set_value(U_update)
-        model.U_reset.set_value(U_reset)
-        model.U_candidate.set_value(U_candidate)
-        model.W_update.set_value(W_update)
-        model.W_reset.set_value(W_reset)
-        model.W_candidate.set_value(W_candidate)
-        model.b_update.set_value(b_update)
-        model.b_reset.set_value(b_reset)
-        model.b_candidate.set_value(b_candidate)
+        model.U_update[0].set_value(U_update_0)
+        model.U_reset[0].set_value(U_reset_0)
+        model.U_candidate[0].set_value(U_candidate_0)
+        model.W_update[0].set_value(W_update_0)
+        model.W_reset[0].set_value(W_reset_0)
+        model.W_candidate[0].set_value(W_candidate_0)
+        model.b_update[0].set_value(b_update_0)
+        model.b_reset[0].set_value(b_reset_0)
+        model.b_candidate[0].set_value(b_candidate_0)
+        model.U_update[1].set_value(U_update_1)
+        model.U_reset[1].set_value(U_reset_1)
+        model.U_candidate[1].set_value(U_candidate_1)
+        model.W_update[1].set_value(W_update_1)
+        model.W_reset[1].set_value(W_reset_1)
+        model.W_candidate[1].set_value(W_candidate_1)
+        model.b_update[1].set_value(b_update_1)
+        model.b_reset[1].set_value(b_reset_1)
+        model.b_candidate[1].set_value(b_candidate_1)
 
         model.V.set_value(V)
         model.output_bias.set_value(ob)
@@ -439,17 +460,19 @@ class GRU2LwEmSentenceBased(object):
 
 if __name__ == '__main__':
 
-    model = GRU2LwEmSentenceBased(input_dim=2,embedding_dim=10, output_dim=2)
-    learning_rate = 0.001
-    x_train = [[1,2],[1,1]]
-    y_train = [[2,4],[2,2]]
+   # model = GRU2LwEmSentenceBased(input_dim=2,embedding_dim=10, output_dim=2)
+   # model.save_model_parameters_theano("test")
+    model1 = GRU2LwEmSentenceBased.load_model_parameters_theano("test.npz")
+#    learning_rate = 0.001
+#    x_train = [[1,2],[1,1]]
+#    y_train = [[2,4],[2,2]]
     # Print SGD step time
-    t1 = time.time()
-    model.sgd_step(x_train, y_train, learning_rate)
+#    t1 = time.time()
+#    model.sgd_step(x_train, y_train, learning_rate)
 
-    t2 = time.time()
-    print("SGD Step time: %f milliseconds" % ((t2 - t1) * 1000.))
-    sys.stdout.flush()
+#    t2 = time.time()
+#    print("SGD Step time: %f milliseconds" % ((t2 - t1) * 1000.))
+#    sys.stdout.flush()
 
     # We do this every few examples to understand what's going on
 
