@@ -17,6 +17,7 @@ from datetime import datetime
 
 sys.path.append('../../')
 from Util.util.data.DataPrep import *
+from Util.util.visual.Visualizer import *
 
 
 class GRU2LwEmSentenceBased(object):
@@ -183,12 +184,6 @@ class GRU2LwEmSentenceBased(object):
             # Final output calculation
             # Theano's softmax returns a matrix with one row, we only need the row
             o_t = T.nnet.softmax(V.dot(s_2) + output_bias)[0]
-
-            print_update_gate_1 = theano.printing.Print('UpdateGate_1 for ')
-            print_update_gate_1(update_gate_1)
-
-            print_update_gate_2 = theano.printing.Print('UpdateGate_2 for ')
-            print_update_gate_2(update_gate_2)
 
             return [o_t, s_1, s_2]
 
@@ -418,6 +413,12 @@ class GRU2LwEmSentenceBased(object):
         print("Saved model parameters to %s." % outfile)
 
 
+    def outputDim(self):
+        return self.output_dim
+
+    def plot_V(self):
+        V_value = self.V.get_value()[0]
+        Visualizer.plot_vector(V_value)
 
 
     @staticmethod
@@ -456,6 +457,56 @@ class GRU2LwEmSentenceBased(object):
 
         model.V.set_value(V)
         model.output_bias.set_value(ob)
+        return model
+
+    @staticmethod
+    def load_model_parameters_only(path):
+        modelFile = np.load(path)
+        E, U_update_0, U_update_1,U_reset_0, U_reset_1,U_candidate_0,U_candidate_1, W_update_0, W_update_1,W_reset_0,W_reset_1,W_candidate_0,W_candidate_1,b_update_0,b_update_1,b_reset_0,b_reset_1,b_candidate_0,b_candidate_1, V, ob = \
+                           modelFile["Embedding"], modelFile["U_update_0"], modelFile["U_update_1"],modelFile["U_reset_0"], modelFile["U_reset_1"],modelFile["U_candidate_0"], modelFile["U_candidate_1"],\
+                                                   modelFile["W_update_0"],modelFile["W_update_1"],modelFile["W_reset_0"], modelFile["W_reset_1"], modelFile["W_candidate_0"], modelFile["W_candidate_1"],\
+                                                   modelFile["b_update_0"],modelFile["b_update_1"],modelFile["b_reset_0"],modelFile["b_reset_1"],modelFile["b_candidate_0"],modelFile["b_candidate_1"],\
+                                                   \
+                                                   \
+                           modelFile["V"],  modelFile["output_bias"]
+        hidden_dim, word_dim = E.shape[0], E.shape[1]
+        print("Building model model from %s with hidden_dim=%d word_dim=%d" % (path, hidden_dim, word_dim))
+        sys.stdout.flush()
+        #model = GRU2LwEmSentenceBased(input_dim=E.shape[1],embedding_dim=E.shape[0], hidden_dim1=U_update_0.shape[0],hidden_dim2=U_update_1.shape[0],output_dim=V.shape[0])
+        model = {}
+        model["U_update"] = {}
+        model["U_reset"] = {}
+        model["U_candidate"] = {}
+        model["W_update"] = {}
+        model["W_reset"] = {}
+        model["W_candidate"] = {}
+
+        model["b_update"] = {}
+        model["b_reset"] = {}
+        model["b_candidate"] = {}
+
+        model["Embedding"] = E
+        model["U_update"][0] = U_update_0
+        model["U_reset"][0] = U_reset_0
+        model["U_candidate"][0] = U_candidate_0
+        model["W_update"][0] = W_update_0
+        model["W_reset"][0] = W_reset_0
+        model["W_candidate"][0] = W_candidate_0
+        model["b_update"][0] = b_update_0
+        model["b_reset"][0] = b_reset_0
+        model["b_candidate"][0] = b_candidate_0
+        model["U_update"][1] = U_update_1
+        model["U_reset"][1] = U_reset_1
+        model["U_candidate"][1] = U_candidate_1
+        model["W_update"][1] = W_update_1
+        model["W_reset"][1] = W_reset_1
+        model["W_candidate"][1] = W_candidate_1
+        model["b_update"][1] = b_update_1
+        model["b_reset"][1] = b_reset_1
+        model["b_candidate"][1] = b_candidate_1
+
+        model["V"] = V
+        model["output_bias"] = ob
         return model
 
 if __name__ == '__main__':
