@@ -184,6 +184,27 @@ class GRU2LwEmSentenceBased(object):
             # Final output calculation
             # Theano's softmax returns a matrix with one row, we only need the row
             o_t = T.nnet.softmax(V.dot(s_2) + output_bias)[0]
+            # Word Embeding layer
+            x_e = E.dot(x_t.T)
+            x_e = x_e.astype(theano.config.floatX)
+
+            # GRU Layer 1
+            update_gate_1 = T.nnet.hard_sigmoid(U_update[0].dot(x_e) + W_update[0].dot(s_1_prev) + b_update[0])
+            reset_gate_1 = T.nnet.hard_sigmoid(U_reset[0].dot(x_e) + W_reset[0].dot(s_1_prev) + b_reset[0])
+            c_1 = T.tanh(U_candidate[0].dot(x_e) + W_candidate[0].dot(s_1_prev * reset_gate_1) + b_candidate[0])
+            s_1 = (T.ones_like(update_gate_1) - update_gate_1) * c_1 + update_gate_1 * s_1_prev
+
+            # GRU Layer 2
+            update_gate_2 = T.nnet.hard_sigmoid(U_update[1].dot(s_1) + W_update[1].dot(s_2_prev) + b_update[1])
+            reset_gate_2 = T.nnet.hard_sigmoid(U_reset[1].dot(s_1) + W_reset[1].dot(s_2_prev) + b_reset[1])
+            c_2 = T.tanh(U_candidate[1].dot(s_1) + W_candidate[1].dot(s_2_prev * reset_gate_2) + b_candidate[1])
+            s_2 = (T.ones_like(update_gate_2) - update_gate_2) * c_2 + update_gate_2 * s_2_prev
+
+            # Final output calculation
+            # Theano's softmax returns a matrix with one row, we only need the row
+            o_t = T.nnet.softmax(V.dot(s_2) + output_bias)[0]
+
+            return [o_t, s_1, s_2]
 
             return [o_t, s_1, s_2]
 
@@ -198,8 +219,22 @@ class GRU2LwEmSentenceBased(object):
         prediction = T.argmax(o)
         o_error = T.sum(T.nnet.categorical_crossentropy(o[-1], y[-1]))
 
-        # Total cost (could add regularization here)
-        cost = o_error
+
+        # regularized cost
+        reg_lambda = 0.01
+        cost = o_error + reg_lambda * ((self.U_candidate[0] * self.U_candidate[0]).sum() + (self.b_candidate[0] * self.b_candidate[0]).sum()\
+                          + (self.W_candidate[0] * self.W_candidate[0]).sum()  \
+                          + (self.U_candidate[1] * self.U_candidate[1]).sum() + (self.b_candidate[1] * self.b_candidate[1]).sum()\
+                          + (self.W_candidate[1] * self.W_candidate[1]).sum()  \
+                          + (self.U_update[0] * self.U_update[0]).sum() + (self.b_update[0] * self.b_update[0]).sum()\
+                          + (self.W_update[0] * self.W_update[0]).sum()  \
+                          + (self.U_update[1] * self.U_update[1]).sum() + (self.b_update[1] * self.b_update[1]).sum()\
+                          + (self.W_update[1] * self.W_update[1]).sum()  \
+                          + (self.U_reset[0] * self.U_reset[0]).sum() + (self.b_reset[0] * self.b_reset[0]).sum()\
+                          + (self.W_reset[0] * self.W_reset[0]).sum()  \
+                          + (self.U_reset[1] * self.U_reset[1]).sum() + (self.b_reset[1] * self.b_reset[1]).sum()\
+                          + (self.W_reset[1] * self.W_reset[1]).sum()
+                                        )
 
         # Gradients
         dU_update = {}

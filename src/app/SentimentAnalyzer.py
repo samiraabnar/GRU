@@ -22,9 +22,9 @@ class SentimentAnalyzer(object):
     def init_train_data(self):
         self.train = {}
         self.test = {}
-        self.train["sentences"], self.train["sentiments"], self.word_to_index, self.index_to_word, self.labels_count = DataPrep.load_one_hot_sentiment_data("../../data/sentiment/trainsentence_and_label.txt")
+        self.train["sentences"], self.train["sentiments"], self.word_to_index, self.index_to_word, self.labels_count = DataPrep.load_one_hot_sentiment_data("../../data/sentiment/trainsentence_and_label_binary.txt")
         #self.dev["sentences"], self.dev["sentiments"] = DataPrep.load_one_hot_sentiment_data_traind_vocabulary("../../data/sentiment/devsentence_and_label.txt",self.word_to_index, self.index_to_word,self.labels_count)
-        self.test["sentences"], self.test["sentiments"]= DataPrep.load_one_hot_sentiment_data_traind_vocabulary("../../data/sentiment/testsentence_and_label.txt",self.word_to_index, self.index_to_word,self.labels_count)
+        self.test["sentences"], self.test["sentiments"]= DataPrep.load_one_hot_sentiment_data_traind_vocabulary("../../data/sentiment/testsentence_and_label_binary.txt",self.word_to_index, self.index_to_word,self.labels_count)
 
         self.vocab_size = len(self.index_to_word)
 
@@ -43,14 +43,28 @@ class SentimentAnalyzer(object):
 
         accuracy = correct / len(self.test["sentences"])
 
-        print("Accuracy: %f" %accuracy)
+        print("Accuracy on test: %f" %accuracy)
+
+
+        pc_sentiment = np.zeros((len(self.train["sentences"]),self.labels_count))
+        for i in np.arange(len(self.train["sentences"])):
+            pc_sentiment[i] = self.model.predict(self.train["sentences"][i])
+
+        correct = 0.0
+        for i in np.arange(len(self.train["sentences"])):
+            if np.argmax(pc_sentiment[i]) == np.argmax(self.train["sentiments"][i]):
+                correct += 1
+
+        accuracy = correct / len(self.train["sentences"])
+
+        print("Accuracy on train: %f" %accuracy)
 
     def train_model(self):
         self.init_train_data()
-        self.model = GRU2LwEmSentenceBased(input_dim=self.vocab_size, embedding_dim=300, output_dim=self.labels_count, hidden_dim1= 100, hidden_dim2=100)
+        self.model = GRU2LwEmSentenceBased(input_dim=self.vocab_size, embedding_dim=300, output_dim=self.labels_count, hidden_dim1= 256, hidden_dim2=256)
 
         learning_rate = 0.001
-        nepoch = 2
+        nepoch = 5
         decay = 0.9
         epochs_per_callback = 1
 
@@ -63,8 +77,8 @@ class SentimentAnalyzer(object):
         self.model.train_with_sgd(self.train["sentences"],expected_outputs, learning_rate, nepoch, decay, epochs_per_callback,self.test_model)
 
     def save(self):
-        self.model.save_model_parameters_theano("FirstTrainedModel_3.txt")
-        with open('dict_3' + '.pkl', 'wb') as f:
+        self.model.save_model_parameters_theano("FirstTrainedModel_binary_2.txt")
+        with open('dict_binary_2' + '.pkl', 'wb') as f:
             pickle.dump(self.word_to_index, f)
 
     def load(self):
@@ -104,19 +118,26 @@ class SentimentAnalyzer(object):
 
         pc_sentiment = np.zeros((len(test["sentences"]),len(parameters["output_bias"])))
 
-
-
-
         for sent in test["sentences"]:
             s_1 = np.zeros(parameters["U_update"][0].shape[0])
             s_2 = np.zeros(parameters["U_update"][1].shape[0])
             o_t = []
 
-            plt.ion()
+            """ plt.ion()
             plt.bar(np.arange(100)+0.5,np.zeros(100),width=1,color='blue')
             plt.show()
-            plt.pause(0.0001)
+            plt.pause(0.0001)"""
             update_gate_2_values = []
+            update_gate_2_words = []
+
+            reset_gate_1s = []
+            update_gate_1s = []
+
+            reset_gate_2s = []
+            update_gate_2s = []
+
+            hidden_state_1s = []
+            hidden_state_2s = []
 
             for word in sent:
                 x_e = parameters["Embedding"].dot(word.T)
@@ -133,21 +154,68 @@ class SentimentAnalyzer(object):
                 c_2 = np.tanh(parameters["U_candidate"][1].dot(s_1) + parameters["W_candidate"][1].dot(s_2 * reset_gate_2) + parameters["b_candidate"][1])
                 s_2 = (1 - update_gate_2) * c_2 + update_gate_2 * s_2
 
-                o_t = MathUtil.softmax(parameters["V"].dot(s_2) + parameters["output_bias"])
+                o_l2 = MathUtil.softmax(parameters["V"].dot(s_2) + parameters["output_bias"])
+                o_l1 = MathUtil.softmax(parameters["V"].dot(s_1) + parameters["output_bias"])
 
-                update_gate_2_values.append(update_gate_2)
 
-                plt.clf()
-                plt.bar(np.arange(0,200,2),np.abs(parameters["V"][1]),width=2,color='yellow')
-                plt.bar(np.arange(0,200,2),update_gate_2,width=1,color='blue')
-                plt.bar(np.arange(0,200,2)+1,reset_gate_2,width=1,color='red')
+                """ plt.clf()
+                #plt.bar(np.arange(0,200,2),np.abs(parameters["V"][4]),width=2,color='yellow')
+                plt.bar(np.arange(0,200,2),s_2,width=1,color='blue')
+                plt.bar(np.arange(0,200,2)+1,update_gate_2,width=1,color='red')
                 plt.draw()
                 plt.pause(0.0001)
+                name = input("")"""
+                print(index_to_word[np.argmax(word)]+" --> Sentiment So far ol2: " + str(np.argmax(o_l2))+ " ol1: "+str(np.argmax(o_l1)))
 
-                print(index_to_word[np.argmax(word)]+" --> Sentiment So far: " + str(np.argmax(o_t)))
-                #Visualizer.plot_vector([(update_gate_1,'green'),(reset_gate_1,'red')])
-                #Visualizer.plot_vector([(update_gate_2,'blue'),(reset_gate_2,'orange')])
+                ug1 = np.mean(update_gate_1 * parameters["V"], axis=1)
+                rg1 = np.mean(reset_gate_1 * parameters["V"], axis=1)
+                ug2 = np.mean(update_gate_2 * parameters["V"], axis=1)
+                rg2 = np.mean(reset_gate_2 * parameters["V"], axis=1)
 
+                reset_gate_1s.append(reset_gate_1)
+                update_gate_1s.append(update_gate_1)
+
+                reset_gate_2s.append(reset_gate_2)
+                update_gate_2s.append(update_gate_2)
+
+
+                hidden_state_1s.append(s_1)
+                hidden_state_2s.append(s_2)
+
+
+
+
+
+                """plt.clf()
+                plt.bar(np.arange(0,10,2),ug1,width=1,color='blue')
+                plt.bar(np.arange(0,10,2)+1,ug2,width=1,color='red')
+
+                plt.draw()
+                plt.pause(0.0001)
+                name = input("")
+                """
+
+                #plt.bar(np.arange(0,200,2),np.abs(parameters["V"][4]),width=2,color='yellow
+                # ')
+                #plt.bar(np.arange(0,200,2),update_gate_2,width=1,color='blue')
+                #plt.bar(np.arange(0,200,2)+1,reset_gate_2,width=1,color='red')
+                #plt.draw()
+                #plt.pause(0.0001)
+                #name = input("")
+            #plt.clf()
+            #plt.plot(np.arange(1,len(update_gate_2_values)*10,10),update_gate_2_values,"ro")
+            #plt.xticks(np.arange(1,len(update_gate_2_values)*10,10),update_gate_2_words,rotation='vertical')
+            #plt.show()
+
+           # plt.clf()
+
+           # plt.show()
+            print("reset gates 1: ")
+            print(reset_gate_1s)
+            print("update gates 1: ")
+            print(update_gate_1s)
+            print("hidden state 1: ")
+            print(hidden_state_1s)
             name = input("Continue? ")
             print("----------------------------------------")
 
@@ -164,8 +232,8 @@ def prepare_data():
     FileUtil.get_sentence_and_label_from_tree_annotation("../../data/sentiment/trees/test.txt")
 
 if __name__ == '__main__':
-    #SA = SentimentAnalyzer()
-    SentimentAnalyzer.model_analyzer()
-    #SA.train_model()
-    #SA.save()
+    SA = SentimentAnalyzer()
+    #SentimentAnalyzer.model_analyzer()
+    SA.train_model()
+    SA.save()
 
