@@ -61,7 +61,7 @@ class SentimentAnalyzer(object):
 
     def train_model(self):
         self.init_train_data()
-        self.model = GRU2LwEmSentenceBased(input_dim=self.vocab_size, embedding_dim=300, output_dim=self.labels_count, hidden_dim1= 256, hidden_dim2=256)
+        self.model = GRU2LwEmSentenceBased(input_dim=self.vocab_size, embedding_dim=300, output_dim=self.labels_count, hidden_dim1= 100, hidden_dim2=100)
 
         learning_rate = 0.001
         nepoch = 5
@@ -77,8 +77,8 @@ class SentimentAnalyzer(object):
         self.model.train_with_sgd(self.train["sentences"],expected_outputs, learning_rate, nepoch, decay, epochs_per_callback,self.test_model)
 
     def save(self):
-        self.model.save_model_parameters_theano("FirstTrainedModel_binary_2.txt")
-        with open('dict_binary_2' + '.pkl', 'wb') as f:
+        self.model.save_model_parameters_theano("FirstTrainedModel_binary_5.txt")
+        with open('dict_binary_5' + '.pkl', 'wb') as f:
             pickle.dump(self.word_to_index, f)
 
     def load(self):
