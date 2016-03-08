@@ -29,7 +29,7 @@ class SentimentAnalyzer(object):
         self.vocab_size = len(self.index_to_word)
 
     def init_model(self):
-        self.model = GRU2LwEmSentenceBased(input_dim=self.vocab_size, embedding_dim=300, output_dim=self.labels_count, hidden_dim1= 256, hidden_dim2=256)
+        self.model = GRU2LwEmSentenceBased(input_dim=self.vocab_size, embedding_dim=300, output_dim=self.labels_count, hidden_dim1= 128, hidden_dim2=128)
 
     def test_model(self,num_examples_seen):
         pc_sentiment = np.zeros((len(self.test["sentences"]),self.labels_count))

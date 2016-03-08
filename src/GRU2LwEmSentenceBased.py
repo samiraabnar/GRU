@@ -221,9 +221,14 @@ class GRU2LwEmSentenceBased(object):
 
 
         # regularized cost
+<<<<<<< HEAD
         reg_lambda = 0.001
         cost = o_error + reg_lambda * ( (self.Embedding * self.Embedding).sum() + (self.V * self.V).sum()
                           + (self.U_candidate[0] * self.U_candidate[0]).sum() + (self.b_candidate[0] * self.b_candidate[0]).sum()\
+=======
+        reg_lambda = 0.0001
+        cost = o_error + reg_lambda * ((self.U_candidate[0] * self.U_candidate[0]).sum() + (self.b_candidate[0] * self.b_candidate[0]).sum()\
+>>>>>>> e99c89d85899d83d73c58dcbd03f0013d8049cb1
                           + (self.W_candidate[0] * self.W_candidate[0]).sum()  \
                           + (self.U_candidate[1] * self.U_candidate[1]).sum() + (self.b_candidate[1] * self.b_candidate[1]).sum()\
                           + (self.W_candidate[1] * self.W_candidate[1]).sum()  \
