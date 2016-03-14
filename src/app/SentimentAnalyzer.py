@@ -29,12 +29,12 @@ class SentimentAnalyzer(object):
         self.vocab_size = len(self.index_to_word)
 
     def init_model(self):
-        self.model = RecursiveGRU2LwEmSentenceBased(input_dim=self.vocab_size, output_dim=self.labels_count,hidden_dim=256)#GRU2LwEmSentenceBased(input_dim=self.vocab_size, embedding_dim=300, output_dim=self.labels_count, hidden_dim1= 100, hidden_dim2=100)
+        self.model = RecursiveGRU2LwEmSentenceBased(input_dim=self.vocab_size, output_dim=self.labels_count,hidden_dim=512,regularization=RegularizationType.DROP_CONNECT)#GRU2LwEmSentenceBased(input_dim=self.vocab_size, embedding_dim=300, output_dim=self.labels_count, hidden_dim1= 100, hidden_dim2=100)
 
     def test_model(self,num_examples_seen):
         pc_sentiment = np.zeros((len(self.test["sentences"]),self.labels_count))
         for i in np.arange(len(self.test["sentences"])):
-            pc_sentiment[i] = self.model.predict(self.test["sentences"][i])
+            pc_sentiment[i] = self.model.predict(self.test["sentences"][i],np.ones((len(self.test["sentences"][i]),self.model.hiddem_dim),dtype=np.float32))
 
         correct = 0.0
         for i in np.arange(len(self.test["sentences"])):
@@ -77,8 +77,8 @@ class SentimentAnalyzer(object):
         self.model.train_with_sgd(self.train["sentences"],expected_outputs, learning_rate, nepoch, decay, epochs_per_callback,self.test_model)
 
     def save(self):
-        self.model.save_model_parameters_theano("FirstTrainedModel_binary_Recursive_7.txt")
-        with open('dict_binary_Recursive_7' + '.pkl', 'wb') as f:
+        self.model.save_model_parameters_theano("FirstTrainedModel_binary_Recursive_dropconnect_9.txt")
+        with open('dict_binary_Recursive_dropconnect_9' + '.pkl', 'wb') as f:
             pickle.dump(self.word_to_index, f)
 
     def load(self):

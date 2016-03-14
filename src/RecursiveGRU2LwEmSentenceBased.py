@@ -18,17 +18,27 @@ from datetime import datetime
 sys.path.append('../../')
 from Util.util.data.DataPrep import *
 from Util.util.visual.Visualizer import *
+from enum import Enum
+
+
+
+class RegularizationType(Enum):
+    NONE = 1
+    LAMBDA = 2
+    DROP_CONNECT = 3
 
 
 class RecursiveGRU2LwEmSentenceBased(object):
 
-    def __init__(self, input_dim,output_dim, hidden_dim= 128, bptt_truncate=-1):
+    def __init__(self, input_dim,output_dim, hidden_dim= 128, bptt_truncate=-1, regularization=RegularizationType.LAMBDA, dropout_p=0.5):
 
         self.input_dim = input_dim
         self.embedding_dim = hidden_dim
         self.hidden_dim = hidden_dim
         self.output_dim = output_dim
-
+        self.regularization_type = regularization
+        self.random_state = T.shared_randomstreams.RandomStreams(np.random.RandomState(12345).randint(999999))
+        self.dropout_p = dropout_p
 
         self.bptt_truncate = bptt_truncate
 
@@ -130,24 +140,39 @@ class RecursiveGRU2LwEmSentenceBased(object):
                                    self.b_candidate, self.output_bias
 
         x = T.imatrix('x').astype(theano.config.floatX)
+        drop_masks = T.imatrix('x').astype(theano.config.floatX)
         y = T.imatrix('y').astype(theano.config.floatX)
 
-        def forward_prop_step(x_t, s_1_prev, s_2_prev):
+        random_state = self.random_state
+        dropout_p = self.dropout_p
+        regularization_type = self.regularization_type
+
+
+
+        def forward_prop_step(x_t, dropmask_t, s_1_prev, s_2_prev):
 
             # Word Embeding layer
             x_e = E.dot(x_t.T)
             x_e = x_e.astype(theano.config.floatX)
 
+
+            drop_mask = T.ones_like(U_update[0].astype(theano.config.floatX),dtype=theano.config.floatX)
+            if regularization_type == RegularizationType.DROP_CONNECT:
+                drop_mask = dropmask_t
+
+
+
+
             # GRU Layer 1
-            update_gate_1 = T.nnet.hard_sigmoid(U_update[0].dot(x_e) + W_update[0].dot(s_1_prev) + b_update[0])
-            reset_gate_1 = T.nnet.hard_sigmoid(U_reset[0].dot(x_e) + W_reset[0].dot(s_1_prev) + b_reset[0])
-            c_1 = T.tanh(U_candidate[0].dot(x_e) + W_candidate[0].dot(s_1_prev * reset_gate_1) + b_candidate[0])
+            update_gate_1 = T.nnet.hard_sigmoid((drop_mask * U_update[0]).dot(x_e) + W_update[0].dot(s_1_prev) + b_update[0])
+            reset_gate_1 = T.nnet.hard_sigmoid((drop_mask * U_reset[0]).dot(x_e) + W_reset[0].dot(s_1_prev) + b_reset[0])
+            c_1 = T.tanh((drop_mask * U_candidate[0]).dot(x_e) + W_candidate[0].dot(s_1_prev * reset_gate_1) + b_candidate[0])
             s_1 = (T.ones_like(update_gate_1) - update_gate_1) * c_1 + update_gate_1 * s_1_prev
 
             # GRU Layer 2
-            update_gate_2 = T.nnet.hard_sigmoid(U_update[0].dot(s_1) + W_update[0].dot(s_2_prev) + b_update[0])
-            reset_gate_2 = T.nnet.hard_sigmoid(U_reset[0].dot(s_1) + W_reset[0].dot(s_2_prev) + b_reset[0])
-            c_2 = T.tanh(U_candidate[0].dot(s_1) + W_candidate[0].dot(s_2_prev * reset_gate_2) + b_candidate[0])
+            update_gate_2 = T.nnet.hard_sigmoid((drop_mask * U_update[0]).dot(s_1) + W_update[0].dot(s_2_prev) + b_update[0])
+            reset_gate_2 = T.nnet.hard_sigmoid((drop_mask * U_reset[0]).dot(s_1) + W_reset[0].dot(s_2_prev) + b_reset[0])
+            c_2 = T.tanh((drop_mask * U_candidate[0]).dot(s_1) + W_candidate[0].dot(s_2_prev * reset_gate_2) + b_candidate[0])
             s_2 = (T.ones_like(update_gate_2) - update_gate_2) * c_2 + update_gate_2 * s_2_prev
 
             # Final output calculation
@@ -158,7 +183,7 @@ class RecursiveGRU2LwEmSentenceBased(object):
 
         [o, s, s2], updates = theano.scan(
             forward_prop_step,
-            sequences=x,
+            sequences= [x,drop_masks],
             truncate_gradient=self.bptt_truncate,
             outputs_info=[None,
                           dict(initial=T.zeros(self.hidden_dim)),
@@ -169,7 +194,9 @@ class RecursiveGRU2LwEmSentenceBased(object):
 
 
         # regularized cost
-        reg_lambda = 0.0001
+        reg_lambda = 0.0
+        if self.regularization_type == RegularizationType.LAMBDA:
+            reg_lambda = 0.0001
         cost = o_error + reg_lambda * ( (self.Embedding * self.Embedding).sum() + (self.V * self.V).sum()
                           + (self.U_candidate[0] * self.U_candidate[0]).sum() + (self.b_candidate[0] * self.b_candidate[0]).sum()\
                           + (self.W_candidate[0] * self.W_candidate[0]).sum()  \
@@ -212,10 +239,10 @@ class RecursiveGRU2LwEmSentenceBased(object):
         dOutputBias = T.grad(cost, output_bias)
 
         # Assign functions
-        self.predict = theano.function([x], o[-1])
-        self.predict_class = theano.function([x], prediction)
-        self.calculate_cost = theano.function([x, y], cost)
-        self.bptt = theano.function([x, y], [dE,
+        self.predict = theano.function([x,drop_masks], o[-1])
+        self.predict_class = theano.function([x,drop_masks], prediction)
+        self.calculate_cost = theano.function([x,drop_masks, y], cost)
+        self.bptt = theano.function([x,drop_masks, y], [dE,
                                              dU_update[0], dU_reset[0],dU_candidate[0],
                                              dW_update[0], dW_reset[0],dW_candidate[0],
                                              db_update[0], db_reset[0],db_candidate[0],
@@ -256,8 +283,9 @@ class RecursiveGRU2LwEmSentenceBased(object):
         mV = decay * self.mV + (1 - decay) * dV ** 2
         mOutputBias = decay * self.mOutputBias + (1 - decay) * dOutputBias ** 2
 
+        # = random_state.binomial(n=1, p= (1.0 - dropout_p), size=(10000,U_update[0].shape),dtype=theano.config.floatX)
         self.sgd_step = theano.function(
-            [x, y, learning_rate, theano.Param(decay, default=0.9)],
+            [x, y, learning_rate, theano.Param(decay, default=0.9), drop_masks],
             [],
             updates=[(E, E - learning_rate * dE / T.sqrt(mE + 1e-6)),
                      (U_update[0], U_update[0] - learning_rate * dU_update[0] / T.sqrt(mU_update[0] + 1e-6)),
@@ -301,7 +329,7 @@ class RecursiveGRU2LwEmSentenceBased(object):
             # For each training example...
             for i in np.random.permutation(len(y_train)):
                 # One SGD step
-                model.sgd_step(X_train[i], y_train[i], learning_rate, decay)
+                model.sgd_step(X_train[i], y_train[i], learning_rate, decay, np.random.binomial(1, 1.0 - model.dropout_p, (len(X_train[i]),model.hidden_dim)).astype(dtype=np.float32))
                 num_examples_seen += 1
                 # Optionally do callback
             if (callback and callback_every and num_examples_seen % callback_every == 0):
