@@ -22,7 +22,7 @@ class SentimentAnalyzer(object):
     def init_train_data(self):
         self.train = {}
         self.test = {}
-        self.train["sentences"], self.train["sentiments"], self.word_to_index, self.index_to_word, self.labels_count = DataPrep.load_one_hot_sentiment_data("../../data/sentiment/trainsentence_and_label_binary.txt")
+        self.train["sentences"], self.train["sentiments"], self.word_to_index, self.index_to_word, self.labels_count = DataPrep.load_one_hot_sentiment_data("../../data/sentiment/trainsentence_and_label_binary_words_added.txt")
         #self.dev["sentences"], self.dev["sentiments"] = DataPrep.load_one_hot_sentiment_data_traind_vocabulary("../../data/sentiment/devsentence_and_label.txt",self.word_to_index, self.index_to_word,self.labels_count)
         self.test["sentences"], self.test["sentiments"]= DataPrep.load_one_hot_sentiment_data_traind_vocabulary("../../data/sentiment/testsentence_and_label_binary.txt",self.word_to_index, self.index_to_word,self.labels_count)
 
@@ -34,7 +34,7 @@ class SentimentAnalyzer(object):
     def test_model(self,num_examples_seen):
         pc_sentiment = np.zeros((len(self.test["sentences"]),self.labels_count))
         for i in np.arange(len(self.test["sentences"])):
-            pc_sentiment[i] = self.model.predict(self.test["sentences"][i],np.ones((len(self.test["sentences"][i]),self.model.hiddem_dim),dtype=np.float32))
+            pc_sentiment[i] = self.model.predict(self.test["sentences"][i],np.ones((len(self.test["sentences"][i]),self.model.hidden_dim),dtype=np.float32))
 
         correct = 0.0
         for i in np.arange(len(self.test["sentences"])):
@@ -48,7 +48,7 @@ class SentimentAnalyzer(object):
 
         pc_sentiment = np.zeros((len(self.train["sentences"]),self.labels_count))
         for i in np.arange(len(self.train["sentences"])):
-            pc_sentiment[i] = self.model.predict(self.train["sentences"][i])
+            pc_sentiment[i] = self.model.predict(self.train["sentences"][i],np.ones((len(self.train["sentences"][i]),self.model.hidden_dim),dtype=np.float32))
 
         correct = 0.0
         for i in np.arange(len(self.train["sentences"])):
@@ -77,8 +77,8 @@ class SentimentAnalyzer(object):
         self.model.train_with_sgd(self.train["sentences"],expected_outputs, learning_rate, nepoch, decay, epochs_per_callback,self.test_model)
 
     def save(self):
-        self.model.save_model_parameters_theano("FirstTrainedModel_binary_Recursive_dropconnect_9.txt")
-        with open('dict_binary_Recursive_dropconnect_9' + '.pkl', 'wb') as f:
+        self.model.save_model_parameters_theano("FirstTrainedModel_binary_Recursive_drop_connect_withwords_9.txt")
+        with open('dict_binary_Recursive_drop_connect_withwords_9' + '.pkl', 'wb') as f:
             pickle.dump(self.word_to_index, f)
 
     def load(self):
